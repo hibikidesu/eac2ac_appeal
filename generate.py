@@ -46,16 +46,23 @@ def find_game_appeal_cards(game_directory: str) -> list:
 
 
 def create_appeal_xml(last_card_id: int, new_cards: list, mod_path: str):
+    """
+    Create merged appeal xml
+    :param last_card_id: id of the last card to add to
+    :param new_cards: list of new cards to add
+    :param mod_path: path of the mod
+    :return:
+    """
+    # Read card data from eac appeal csv
     card_data = {}
-
     with open("appeal.csv", "r") as f:
         for x in csv.reader(f, delimiter=","):
             for card in new_cards:
                 if card.rpartition(".")[0] in x:
                     card_data[x[0]] = x[1:]
 
+    # Create xml and create data for new cards to merge with
     root = ET.Element("appeal_card_data")
-
     for card in new_cards:
         last_card_id += 1
         
@@ -68,6 +75,14 @@ def create_appeal_xml(last_card_id: int, new_cards: list, mod_path: str):
             i = ET.SubElement(info, name, attrib)
             i.text = value
 
+        # Game uses [br:0] instead of \n.
+        # Not sure if eac has illustrator data so left it as sdvx designers.
+        # eac dist date megu weird not sure what the first character is, changed it to a full year (2020).
+        # Set to default in case server does not have it on unlock.
+        # Not sure what genres there are.
+        # Dunno what rarity means, game version or rarity of the card
+        # Sort no, also dunno, assume its the order which its sorted by
+        # Generator number is prob then num when printed
         data = card_data[card.rpartition(".")[0]]
         create_element("texture", card.rpartition(".")[0])
         create_element("title", data[1])
@@ -87,9 +102,11 @@ def create_appeal_xml(last_card_id: int, new_cards: list, mod_path: str):
         create_element("sort_no", data[15], {"__type": "u16"})
         create_element("genre", "0", {"__type": "u8"})
 
+    # Create others dir if not exists
     if not os.path.exists(os.path.join(mod_path, "others")):
         os.mkdir(os.path.join(mod_path, "others"))
 
+    # Save merged xml to file
     tree = ET.ElementTree(root)
     appeal_file_new = os.path.join(mod_path, "others", "appeal_card.merged.xml")
     with open(appeal_file_new, "wb") as f:
@@ -137,6 +154,7 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
 
         folder_name = file_name.rpartition(".")[0] + "_ifs"
 
+        # Check the folder for new cards
         for card_name in os.listdir(folder_name):
             if card_name.rpartition(".")[0] not in game_names:
                 print("Found new file {}".format(card_name))
@@ -155,7 +173,7 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
                 # Copy to ifs folder
                 copyfile(os.path.join(folder_name, card_name), os.path.join(ifs_folder, card_name))
 
-                # Resize in game appeal card to fit correctly otherwise the image is white
+                # Resize in game appeal card to fit correctly otherwise the image is white, 150x192 32bit
                 img = Image.open(os.path.join(folder_name, card_name))
                 img = img.resize((150, 192), Image.ANTIALIAS)
                 img.save(os.path.join(apc_folder, card_name))
@@ -186,12 +204,14 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
 
 
 if __name__ == "__main__":
+    # Change these to ur paths
     GAME_PATH = "E:/KFC/contents"
     CLOUD_PATH = "X:/Games/eac"
 
     if not os.path.exists(GAME_PATH):
-        raise FileExistsError("Game path does not exist")
+        raise FileExistsError("Game path does not exist, please change in file")
     if not os.path.exists(CLOUD_PATH):
-        raise FileExistsError("Cloud path does not exist")
+        raise FileExistsError("Cloud path does not exist, please change in file")
 
+    # Generate mod files
     generate_appeal_cards(CLOUD_PATH, GAME_PATH)

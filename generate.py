@@ -1,6 +1,7 @@
 import os
 import csv
-from shutil import rmtree, move
+from PIL import Image
+from shutil import rmtree, move, copyfile
 import xml.etree.ElementTree as ET
 from ifstools import IFS
 import cloud_tools
@@ -141,12 +142,27 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
                 print("Found new file {}".format(card_name))
                 new_cards.append(card_name)
 
-                # Move image file
+                # Create ifs folder
                 ifs_folder = os.path.join(mod_path, "graphics", "s_psd_card_{:02d}_ifs".format(last_ifs_n))
                 if not os.path.exists(ifs_folder):
                     os.makedirs(ifs_folder)
 
-                move(os.path.join(folder_name, card_name), os.path.join(ifs_folder, card_name))
+                # Create ap_card folder
+                apc_folder = os.path.join(mod_path, "graphics", "ap_card")
+                if not os.path.exists(ifs_folder):
+                    os.makedirs(apc_folder)
+
+                # Copy to ifs folder
+                copyfile(os.path.join(folder_name, card_name), os.path.join(ifs_folder, card_name))
+
+                # Resize in game appeal card to fit correctly otherwise the image is white
+                img = Image.open(os.path.join(folder_name, card_name))
+                img = img.resize((150, 192), Image.ANTIALIAS)
+                img.save(os.path.join(apc_folder, card_name))
+                img.close()
+
+        # Delete temp folder
+        rmtree(folder_name)
 
     # Write appeal to file, decrypted
     with open("appeal.csv", "wb") as f:
@@ -167,10 +183,6 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
     if os.path.exists(cache_folder):
         print("Deleting cache")
         rmtree(cache_folder)
-
-    # Cleanup
-    for file in cloud_appeal_ifs:
-        rmtree("cloud_" + file.rpartition("/")[2].rpartition(".")[0] + "_ifs")
 
 
 if __name__ == "__main__":

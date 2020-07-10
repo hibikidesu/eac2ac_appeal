@@ -149,7 +149,7 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
 
                 # Create ap_card folder
                 apc_folder = os.path.join(mod_path, "graphics", "ap_card")
-                if not os.path.exists(ifs_folder):
+                if not os.path.exists(apc_folder):
                     os.makedirs(apc_folder)
 
                 # Copy to ifs folder

@@ -87,3 +87,21 @@ def decrypt_file(source_dir, path):
     key, iv = generate_keys(path)
     ob = obfuscate(path)
     return crypt_file(os.path.join(source_dir, ob), key, iv)
+
+
+def find_appeal_ifs(cloud_directory: str) -> list:
+    """
+    Find all appeal ifs files in obfuscated dir
+    :param cloud_directory:
+    :return:
+    """
+    found = []
+    i = 0
+    while True:
+        i += 1
+        directory = "data/graphics/psd_card_{:02d}.ifs".format(i)
+        ob_path = obfuscate(directory)
+        if not os.path.isfile(os.path.join(cloud_directory, ob_path)):
+            break
+        found.append(directory)
+    return found

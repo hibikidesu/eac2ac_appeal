@@ -1,29 +1,16 @@
 import os
 import csv
 from PIL import Image
-from shutil import rmtree, move, copyfile
+from shutil import rmtree, copyfile
 import xml.etree.ElementTree as ET
 from ifstools import IFS
 import cloud_tools
 
 
-def find_cloud_appeal_ifs(cloud_directory: str) -> list:
-    found = []
-    i = 0
-    while True:
-        i += 1
-        directory = "data/graphics/psd_card_{:02d}.ifs".format(i)
-        ob_path = cloud_tools.obfuscate(directory)
-        if not os.path.isfile(os.path.join(cloud_directory, ob_path)):
-            break
-        found.append(directory)
-    return found
-
-
 def parse_appeal_file(appeal_file: str) -> list:
     cards = []
     
-    with open(appeal_file   , "r") as f:
+    with open(appeal_file, "r") as f:
         data = ET.fromstring(f.read())
 
     for child in data:
@@ -114,17 +101,22 @@ def create_appeal_xml(last_card_id: int, new_cards: list, mod_path: str):
 
 
 def generate_appeal_cards(cloud_directory: str, game_directory: str):
-    """Checks what exists and generate them"""
-    cloud_appeal_ifs = find_cloud_appeal_ifs(cloud_directory)
-    game_appeal_cards = find_game_appeal_cards(game_directory)
+    """
+    Generates mod files
+    :param cloud_directory:
+    :param game_directory:
+    :return:
+    """
     mod_path = os.path.join(game_directory, "data_mods", "eac_appeal")
+    cloud_appeal_ifs = cloud_tools.find_appeal_ifs(cloud_directory)
+    game_appeal_cards = find_game_appeal_cards(game_directory)
 
     # Recreate mod folder
     if os.path.exists(mod_path):
         rmtree(mod_path)
-    os.mkdir(mod_path)
+    os.makedirs(mod_path)
 
-    # Get the last ifs in game
+    # Find the last ifs number in game folder to append to
     last_ifs_n = 0
     for x in os.listdir(os.path.join(game_directory, "data", "graphics")):
         if x.startswith("s_psd_card_"):
@@ -132,6 +124,7 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
             if ifs_n > last_ifs_n:
                 last_ifs_n = ifs_n
 
+    # Put all game appeal card names into a list
     game_names = [x[1] for x in game_appeal_cards]
     new_cards = []
 
@@ -154,7 +147,7 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
 
         folder_name = file_name.rpartition(".")[0] + "_ifs"
 
-        # Check the folder for new cards
+        # Check the eac folder for new cards
         for card_name in os.listdir(folder_name):
             if card_name.rpartition(".")[0] not in game_names:
                 print("Found new file {}".format(card_name))
@@ -179,14 +172,14 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
                 img.save(os.path.join(apc_folder, card_name))
                 img.close()
 
-        # Delete temp folder
+        # Delete temp extracted folder
         rmtree(folder_name)
 
-    # Write appeal to file, decrypted
+    # Decrypt appeal file to current dir
     with open("appeal.csv", "wb") as f:
         f.write(cloud_tools.decrypt_file(cloud_directory, "data/others/appealmessage.csv"))
 
-    # Create xml
+    # Create xml at the mod dir
     print("Creating merged xml")
     create_appeal_xml(
         game_appeal_cards[-1][0], 
@@ -194,9 +187,10 @@ def generate_appeal_cards(cloud_directory: str, game_directory: str):
         mod_path
     )
 
+    # Remove temp decrypted appeal file
     os.remove("appeal.csv")
 
-    # Delete cache
+    # Delete mod cache if exists
     cache_folder = os.path.join(game_directory, "data_mods", "_cache")
     if os.path.exists(cache_folder):
         print("Deleting cache")
